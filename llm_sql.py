@@ -1,35 +1,27 @@
 from langchain_community.llms import Ollama
-import re
 
 llm = Ollama(model="llama3")
 
-def extract_sql(text):
-    match = re.search(r"```sql(.*?)```", text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
+def text_to_sql(user_input, table_name, columns):
 
-    match = re.search(r"(SELECT .*?;)", text, re.IGNORECASE | re.DOTALL)
-    if match:
-        return match.group(1).strip()
+    column_str = ", ".join(columns)
 
-    return text.strip()
-
-def text_to_sql(user_input):
     prompt = f"""
-    You are an SQL generator.
+You are an expert SQL generator.
 
-    Rules:
-    - Output ONLY SQL
-    - No explanation
-    - No text
-    - No markdown
+Database table name: {table_name}
+Columns: {column_str}
 
-    Table: students(id, name, age, grade)
+Rules:
+- Use ONLY this table
+- Do not guess table names
+- Do not explain anything
+- Return ONLY SQL query
 
-    Input: {user_input}
-    """
+User question:
+{user_input}
+"""
 
     response = llm.invoke(prompt)
-    clean_sql = extract_sql(response)
 
-    return clean_sql
+    return response.strip()

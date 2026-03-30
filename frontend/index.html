@@ -29,6 +29,32 @@
             color: #94a3b8;
         }
 
+        /* 🔥 FILE UPLOAD BAR */
+        .upload-box {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .upload-box input {
+            padding: 8px;
+            background: #1e293b;
+            border: none;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .upload-box button {
+            padding: 8px 15px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            background: #3b82f6;
+            color: white;
+        }
+
         .chat-box {
             flex: 1;
             padding: 20px;
@@ -56,15 +82,14 @@
             align-self: flex-start;
         }
 
-        /* 🔽 INPUT BOX LITTLE ABOVE */
         .input-box {
             display: flex;
             padding: 10px;
-            margin-bottom: 20px; /* 👈 move up */
+            margin-bottom: 20px;
             background: rgba(255,255,255,0.05);
         }
 
-        input {
+        input#input {
             flex: 1;
             padding: 14px;
             border-radius: 25px;
@@ -109,7 +134,13 @@
 
     <div class="header">
         <h1>🤖 AI SQL Assistant</h1>
-        <p>Ask your database in natural language</p>
+        <p>Upload file & ask anything in natural language</p>
+    </div>
+
+    <!-- 🔥 FILE UPLOAD -->
+    <div class="upload-box">
+        <input type="file" id="fileUpload">
+        <button onclick="uploadFile()">Upload</button>
     </div>
 
     <div class="chat-box" id="chat"></div>
@@ -124,8 +155,9 @@
 
 <script>
 
-let pendingDelete = false; // 🔐 safety flag
+let pendingDelete = false;
 
+// 🔹 Add message
 function addMessage(text, type) {
     let chat = document.getElementById("chat");
 
@@ -137,6 +169,31 @@ function addMessage(text, type) {
     chat.scrollTop = chat.scrollHeight;
 }
 
+// 🔹 Upload file
+async function uploadFile() {
+    let file = document.getElementById("fileUpload").files[0];
+
+    if (!file) {
+        alert("Please select a file");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("file", file);
+
+    addMessage("📁 Uploading file...", "bot");
+
+    let res = await fetch("http://127.0.0.1:8000/upload", {
+        method: "POST",
+        body: formData
+    });
+
+    let data = await res.json();
+
+    addMessage("✅ " + data.message, "bot");
+}
+
+// 🔹 Send query
 async function sendQuery() {
     let inputBox = document.getElementById("input");
     let userInput = inputBox.value.toLowerCase();
@@ -146,11 +203,11 @@ async function sendQuery() {
     addMessage(userInput, "user");
     inputBox.value = "";
 
-    // 🔐 HANDLE CONFIRMATION
+    // 🔐 Confirm delete
     if (pendingDelete) {
         if (userInput === "yes") {
             pendingDelete = false;
-            userInput = "delete all students"; // execute now
+            userInput = "delete from uploaded_data";
         } else {
             pendingDelete = false;
             addMessage("❌ Delete cancelled", "bot");
@@ -158,10 +215,9 @@ async function sendQuery() {
         }
     }
 
-    // 🔐 DETECT DELETE
     if (userInput.includes("delete")) {
         pendingDelete = true;
-        addMessage("⚠️ Are you sure you want to delete? Type YES to confirm", "bot");
+        addMessage("⚠️ Are you sure? Type YES to confirm delete", "bot");
         return;
     }
 
@@ -190,6 +246,7 @@ async function sendQuery() {
     addMessage(botMessage, "bot");
 }
 
+// 🔹 Table render
 function renderTable(data, columns) {
     if (!data || data.length === 0) {
         return "<p style='color:#f87171;'>⚠️ No data found</p>";
@@ -215,6 +272,7 @@ function renderTable(data, columns) {
     return html;
 }
 
+// 🔹 Voice
 function startVoice() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 

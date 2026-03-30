@@ -1,19 +1,20 @@
 import sqlite3
 
+DB_NAME = "students.db"
+
 def run_query(query):
-    conn = sqlite3.connect("school.db")
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
     try:
         cursor.execute(query)
 
-        if query.strip().lower().startswith("select"):
+        if query.lower().startswith("select"):
             data = cursor.fetchall()
-
-            # 🔥 GET COLUMN NAMES
             columns = [desc[0] for desc in cursor.description]
 
             conn.close()
+
             return {
                 "type": "select",
                 "columns": columns,
@@ -24,6 +25,7 @@ def run_query(query):
             conn.commit()
             rows = cursor.rowcount
             conn.close()
+
             return {
                 "type": "action",
                 "rows": rows
