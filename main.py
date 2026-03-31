@@ -61,5 +61,5 @@ async def query(data: dict):
 
     return {
         "sql": sql_query,
-        "result": result
+        "result": result 
     }

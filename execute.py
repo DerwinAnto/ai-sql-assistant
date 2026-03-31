@@ -35,5 +35,5 @@ def run_query(query):
         conn.close()
         return {
             "type": "error",
-            "message": str(e)
+            "message": str(e) 
         }

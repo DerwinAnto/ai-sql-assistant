@@ -19,7 +19,7 @@ Rules:
 - Return ONLY SQL query
 
 User question:
-{user_input}
+{user_input} 
 """
 
     response = llm.invoke(prompt)
