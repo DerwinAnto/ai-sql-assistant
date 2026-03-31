@@ -1,4 +1,4 @@
-id,name,age,grade,salary
+id,name,age,grade,salary 
 1,John,15,10,30000
 2,Alice,14,9,35000
 3,Bob,16,11,40000
