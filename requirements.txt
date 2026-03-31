@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pandas
+langchain
+langchain-community
+python-multipart
+speechrecognition
+pyaudio
