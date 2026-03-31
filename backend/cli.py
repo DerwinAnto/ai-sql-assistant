@@ -1,5 +1,5 @@
-from llm_sql import text_to_sql
-from execute import run_query
+from backend.llm_sql import text_to_sql
+from backend.execute import run_query
 
 while True:
     user_input = input("Ask something: ")

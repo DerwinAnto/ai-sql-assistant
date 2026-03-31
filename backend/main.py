@@ -4,8 +4,8 @@ import shutil
 import pandas as pd
 import sqlite3
 
-from llm_sql import text_to_sql
-from execute import run_query
+from backend.llm_sql import text_to_sql
+from backend.execute import run_query
 
 app = FastAPI()
 

@@ -1,6 +1,6 @@
-from llm_sql import text_to_sql
-from execute import run_query
-from voice_input import get_voice_input
+from backend.llm_sql import text_to_sql
+from backend.execute import run_query
+from backend.voice_input import get_voice_input
 
 print("1. Type input")
 print("2. Voice input")
