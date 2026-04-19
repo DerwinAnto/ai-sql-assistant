@@ -3,37 +3,40 @@ import sqlite3
 DB_NAME = "students.db"
 
 def run_query(query):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
     try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
         cursor.execute(query)
 
-        if query.lower().startswith("select"):
-            data = cursor.fetchall()
+        # ✅ SELECT
+        if query.strip().lower().startswith("select"):
+            rows = cursor.fetchall()
             columns = [desc[0] for desc in cursor.description]
 
             conn.close()
 
             return {
                 "type": "select",
-                "columns": columns,
-                "data": data
+                "data": rows,
+                "columns": columns
             }
 
+        # ✅ INSERT / UPDATE / DELETE
         else:
-            conn.commit()
-            rows = cursor.rowcount
+            conn.commit()   # 🔥 IMPORTANT FIX
+            affected = cursor.rowcount
+
             conn.close()
 
             return {
                 "type": "action",
-                "rows": rows
+                "rows": affected
             }
 
     except Exception as e:
-        conn.close()
         return {
             "type": "error",
-            "message": str(e) 
+            "message": str(e)
         }
+    

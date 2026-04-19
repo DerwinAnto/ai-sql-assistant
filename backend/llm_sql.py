@@ -4,24 +4,49 @@ llm = Ollama(model="llama3")
 
 def text_to_sql(user_input, table_name, columns):
 
-    column_str = ", ".join(columns)
-
     prompt = f"""
-You are an expert SQL generator.
+You are an SQL expert.
 
-Database table name: {table_name}
-Columns: {column_str}
+Table: {table_name}
+Columns: {columns}
 
-Rules:
-- Use ONLY this table
-- Do not guess table names
-- Do not explain anything
-- Return ONLY SQL query
+STRICT RULES:
+1. Return ONLY SQL query
+2. DO NOT explain
+3. DO NOT use SELECT instead of DELETE
+4. If user says delete, use DELETE query
+5. If user says update, use UPDATE query
+6. If user says insert, use INSERT query
 
-User question:
-{user_input} 
+Examples:
+
+User: show all students
+SQL: SELECT * FROM {table_name};
+
+User: delete id 10
+SQL: DELETE FROM {table_name} WHERE id = 10;
+
+User: update name to John where id 1
+SQL: UPDATE {table_name} SET name='John' WHERE id=1;
+
+User: insert into students
+SQL: INSERT INTO {table_name} VALUES (...);
+
+Now convert:
+
+User: {user_input}
+SQL:
 """
 
     response = llm.invoke(prompt)
 
-    return response.strip()
+    # 🔥 CLEAN OUTPUT (VERY IMPORTANT)
+    sql = response.strip()
+
+    # remove ```sql ```
+    if "```" in sql:
+        sql = sql.split("```")[1]
+
+    sql = sql.replace("sql", "").strip()
+
+    return sql

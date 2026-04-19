@@ -12,7 +12,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 950px;
             margin: auto;
             height: 100vh;
             display: flex;
@@ -21,21 +21,25 @@
 
         .header {
             text-align: center;
-            padding: 15px;
+            padding: 20px;
             background: rgba(255,255,255,0.05);
+        }
+
+        .header h1 {
+            margin: 0;
         }
 
         .header p {
             color: #94a3b8;
+            margin-top: 5px;
         }
 
-        /* 🔥 FILE UPLOAD BAR */
+        /* 🔥 Upload bar */
         .upload-box {
             display: flex;
             justify-content: center;
             gap: 10px;
             padding: 10px;
-            background: rgba(255,255,255,0.05);
         }
 
         .upload-box input {
@@ -65,10 +69,16 @@
 
         .message {
             margin-bottom: 15px;
-            max-width: 70%;
+            max-width: 75%;
             padding: 14px;
             border-radius: 15px;
             box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .user {
@@ -86,7 +96,6 @@
             display: flex;
             padding: 10px;
             margin-bottom: 20px;
-            background: rgba(255,255,255,0.05);
         }
 
         input#input {
@@ -107,8 +116,8 @@
             cursor: pointer;
         }
 
-        .mic { background: #ef4444; color: white; }
-        .send { background: #22c55e; color: white; }
+        .mic { background: #ef4444; }
+        .send { background: #22c55e; }
 
         table {
             width: 100%;
@@ -134,10 +143,10 @@
 
     <div class="header">
         <h1>🤖 AI SQL Assistant</h1>
-        <p>Upload file & ask anything in natural language</p>
+        <p>Upload CSV & ask in natural language</p>
     </div>
 
-    <!-- 🔥 FILE UPLOAD -->
+    <!-- 🔥 Upload -->
     <div class="upload-box">
         <input type="file" id="fileUpload">
         <button onclick="uploadFile()">Upload</button>
@@ -156,6 +165,7 @@
 <script>
 
 let pendingDelete = false;
+let lastQuery = "";
 
 // 🔹 Add message
 function addMessage(text, type) {
@@ -169,84 +179,80 @@ function addMessage(text, type) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-// 🔹 Upload file
-async function uploadFile() {
-    let file = document.getElementById("fileUpload").files[0];
-
-    if (!file) {
-        alert("Please select a file");
-        return;
-    }
-
-    let formData = new FormData();
-    formData.append("file", file);
-
-    addMessage("📁 Uploading file...", "bot");
-
-    let res = await fetch("http://127.0.0.1:8000/upload", {
-        method: "POST",
-        body: formData
-    });
-
-    let data = await res.json();
-
-    addMessage("✅ " + data.message, "bot");
-}
-
-// 🔹 Send query
+// 🔥 MAIN LOGIC (FIXED)
 async function sendQuery() {
     let inputBox = document.getElementById("input");
-    let userInput = inputBox.value.toLowerCase();
+    let userInput = inputBox.value.trim().toLowerCase();
 
     if (!userInput) return;
 
     addMessage(userInput, "user");
     inputBox.value = "";
 
-    // 🔐 Confirm delete
+    // ✅ STEP 1: confirmation handling
     if (pendingDelete) {
         if (userInput === "yes") {
             pendingDelete = false;
-            userInput = "delete from uploaded_data";
+
+            await executeQuery(lastQuery);
+            lastQuery = "";
+            return;
         } else {
             pendingDelete = false;
+            lastQuery = "";
             addMessage("❌ Delete cancelled", "bot");
             return;
         }
     }
 
-    if (userInput.includes("delete")) {
+    // ✅ STEP 2: detect dangerous commands
+    if (userInput.includes("delete") || userInput.includes("drop")) {
         pendingDelete = true;
-        addMessage("⚠️ Are you sure? Type YES to confirm delete", "bot");
+        lastQuery = userInput;
+
+        addMessage("⚠️ Are you sure? Type YES to confirm", "bot");
         return;
     }
 
-    addMessage("⏳ Thinking...", "bot");
-
-    let response = await fetch("http://127.0.0.1:8000/query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: userInput })
-    });
-
-    let data = await response.json();
-
-    let botMessage = `<b>SQL:</b><br>${data.sql}<br><br>`;
-
-    if (data.result.type === "select") {
-        botMessage += renderTable(data.result.data, data.result.columns);
-    } 
-    else if (data.result.type === "action") {
-        botMessage += `✅ ${data.result.rows} row(s) affected`;
-    } 
-    else {
-        botMessage += `❌ Error: ${data.result.message}`;
-    }
-
-    addMessage(botMessage, "bot");
+    await executeQuery(userInput);
 }
 
-// 🔹 Table render
+// 🔹 Execute API
+async function executeQuery(query) {
+    try {
+        addMessage("⏳ Thinking...", "bot");
+
+        let response = await fetch("http://127.0.0.1:8000/query", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: query })
+        });
+
+        let data = await response.json();
+
+        let botMessage = `<b>SQL:</b><br>${data.sql}<br><br>`;
+
+        if (!data.result) {
+            botMessage += "❌ No response from server";
+        }
+        else if (data.result.type === "select") {
+            botMessage += renderTable(data.result.data || [], data.result.columns || []);
+        }
+        else if (data.result.type === "action") {
+            botMessage += `✅ ${data.result.rows || 0} row(s) affected`;
+        }
+        else {
+            botMessage += `❌ ${data.result.message || "Error"}`;
+        }
+
+        addMessage(botMessage, "bot");
+
+    } catch (error) {
+        addMessage("❌ Something went wrong (UI crash fixed)", "bot");
+        console.error(error);
+    }
+}
+// 🔹 Table
 function renderTable(data, columns) {
     if (!data || data.length === 0) {
         return "<p style='color:#f87171;'>⚠️ No data found</p>";
@@ -270,6 +276,30 @@ function renderTable(data, columns) {
 
     html += "</table>";
     return html;
+}
+
+// 🔹 Upload CSV
+async function uploadFile() {
+    let fileInput = document.getElementById("fileUpload");
+
+    if (!fileInput.files.length) {
+        alert("Select a file first");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    addMessage("📤 Uploading file...", "bot");
+
+    let response = await fetch("http://127.0.0.1:8000/upload", {
+        method: "POST",
+        body: formData
+    });
+
+    let data = await response.json();
+
+    addMessage("✅ File uploaded successfully", "bot");
 }
 
 // 🔹 Voice
@@ -299,4 +329,4 @@ function startVoice() {
 </script>
 
 </body>
-</html> 
+</html>

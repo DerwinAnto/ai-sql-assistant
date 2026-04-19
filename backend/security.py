@@ -1,7 +1,17 @@
-def is_safe(query):
-    dangerous_words = ["DROP", "DELETE", "TRUNCATE", "--"]
+def is_safe_query(sql: str):
+    sql_lower = sql.lower()
 
-    for word in dangerous_words:
-        if word in query.upper():
+    # ❌ Completely block dangerous operations
+    blocked_keywords = [
+        "drop",
+        "truncate",
+        "alter",
+        "delete table",
+        "drop table"
+    ]
+
+    for word in blocked_keywords:
+        if word in sql_lower:
             return False
+
     return True
